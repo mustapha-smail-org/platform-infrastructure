@@ -19,20 +19,32 @@ Caddy routes `PROD_APP_HOST` → `frontend-prod:8080` and `STAGING_APP_HOST` →
 
 ## Before you own the domain
 
-You don't need to buy the domain to get a working, HTTPS-capable box. Pick one:
+You don't need to buy the domain to get a working box for testing. Pick one:
 
-- **`nip.io` (recommended for a real cert)** 🔧 — a free wildcard-DNS host that
-  maps an IP into a name. Set, e.g.:
+- **Caddy internal CA (recommended pre-domain)** — add `tls internal` to each
+  site block in `edge/Caddyfile` (self-signed, no ACME). Reachable over HTTPS
+  with `curl -k` / a browser trust exception. Always works, no external
+  dependency:
   ```
-  PROD_APP_HOST=<VPS_IP>.nip.io
-  STAGING_APP_HOST=staging-<VPS_IP-with-dashes>.nip.io
+  {$PROD_APP_HOST} {
+  	import common
+  	tls internal
+  	reverse_proxy frontend-prod:8080
+  }
   ```
-  These resolve to your box, so Let's Encrypt issues real certs.
 
-- **Local / self-signed** — for testing without any public DNS, replace the site
-  addresses in `edge/Caddyfile` with `:80` blocks and add `tls internal`
-  (Caddy's own CA). No ACME, browser shows an untrusted cert. Fine for a smoke
-  test, not for sharing.
+- **Bypass the proxy entirely** — to prove the app chain without any TLS, hit the
+  frontend on the edge network directly:
+  ```bash
+  docker run --rm --network citypulse-edge curlimages/curl -fsS \
+    http://frontend-prod:8080/api/v1/categories
+  ```
+
+> ⚠️ **`nip.io` does not reliably get a Let's Encrypt cert.** It's one shared
+> registered domain, so LE's per-domain rate limits are usually already hit and
+> issuance fails with a TLS `internal error`. Use it only for DNS resolution with
+> `tls internal`, not for a public cert. Real certs come from your **own domain**
+> below.
 
 ## When you buy the real domain 🔧
 
@@ -41,7 +53,7 @@ You don't need to buy the domain to get a working, HTTPS-capable box. Pick one:
    `environments/<env>/.env`.
 3. Reload:
    ```bash
-   docker compose --env-file edge/.env -p citypulse-edge up -d
+   docker compose --env-file edge/.env -f edge/docker-compose.yml -p citypulse-edge up -d
    docker compose --env-file environments/prod/.env -p citypulse-prod up -d --no-deps api-gateway
    ```
    Caddy fetches the certificates on first request to each new hostname.

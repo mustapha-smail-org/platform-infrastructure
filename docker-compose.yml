@@ -106,7 +106,9 @@ services:
         aliases:
           - "${FRONTEND_EDGE_ALIAS}"
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/healthz >/dev/null 2>&1 || exit 1"]
+      # 127.0.0.1, not localhost: nginx listens IPv4-only, while localhost
+      # resolves to ::1 first inside the container (busybox wget won't fall back).
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/healthz >/dev/null 2>&1 || exit 1"]
       interval: 20s
       timeout: 5s
       retries: 5

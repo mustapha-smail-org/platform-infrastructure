@@ -7,7 +7,10 @@ Each environment is driven by two things on the box, **neither in git**:
 - `environments/<env>/secrets/` — the resolved config files and the Kafka CA,
   mounted into the containers.
 
-Do this once per environment (`prod`, then `staging`).
+The `environments/<env>/` folders (with `.env.example` and `secrets/README.md`)
+ship with the repo — you don't create them. You create the `.env` and the real
+secret files *inside* them, below. Do this once per environment (`prod`, then
+`staging`).
 
 ## 3.1 The `.env` file
 

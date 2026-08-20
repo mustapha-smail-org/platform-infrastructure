@@ -80,7 +80,7 @@ docker compose --env-file environments/prod/.env -p citypulse-prod up -d --no-de
 
 ```bash
 $EDITOR edge/Caddyfile     # or edge/.env
-docker compose --env-file edge/.env -p citypulse-edge up -d
+docker compose --env-file edge/.env -f edge/docker-compose.yml -p citypulse-edge up -d
 ```
 
 Next: [Troubleshooting →](8-Troubleshooting.md)
