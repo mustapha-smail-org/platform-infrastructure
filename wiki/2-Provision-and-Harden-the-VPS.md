@@ -43,9 +43,15 @@ It is re-runnable. It performs, in order:
 > Keep your current root session open until you've confirmed the `deployer`
 > login works, so you can't lock yourself out.
 
+> **From here on, do everything as `deployer`, not root.** Root was only for the
+> one-time bootstrap above; root SSH is now disabled. The rest of setup and all
+> day-to-day operations are unprivileged — `docker` works without `sudo` (the
+> `docker` group), and `sudo` is used only where a command below shows it.
+
 ## 2.4 Authenticate to GHCR 🔧
 
-So the box can pull the private images:
+So the box can pull the private images (run as `deployer`, so compose can use the
+credentials):
 
 ```bash
 echo "<GHCR_READ_PAT>" | docker login ghcr.io -u <your-github-user> --password-stdin
@@ -54,13 +60,15 @@ echo "<GHCR_READ_PAT>" | docker login ghcr.io -u <your-github-user> --password-s
 ## 2.5 Put the repo on the box
 
 ```bash
-sudo chown -R deployer:deployer /opt/citypulse
-cd /opt/citypulse
+cd /opt/citypulse            # already owned by deployer (created by bootstrap)
 git clone <your platform-infrastructure remote> platform-infrastructure
 cd platform-infrastructure
 ```
 
 (If you version it privately, `scp`/`rsync` the directory here instead.)
+
+> `deployer` has **passwordless sudo** (set by bootstrap) — the account is
+> key-only, so there's no password to type. `sudo <cmd>` just works.
 
 ## 2.6 Verify
 

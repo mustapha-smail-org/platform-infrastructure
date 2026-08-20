@@ -25,6 +25,11 @@ apt-get $APT_WAIT install -y ca-certificates curl gnupg ufw fail2ban unattended-
 echo "== 2/9 non-root sudo user with your key =="
 id "$DEPLOY_USER" &>/dev/null || adduser --disabled-password --gecos "" "$DEPLOY_USER"
 usermod -aG sudo "$DEPLOY_USER"
+# The account is key-only (no password), so a sudo password prompt would be
+# unusable. Login by SSH key already grants full admin on this single-admin box,
+# so grant passwordless sudo rather than leaving sudo broken.
+echo "$DEPLOY_USER ALL=(ALL) NOPASSWD:ALL" > "/etc/sudoers.d/$DEPLOY_USER"
+chmod 440 "/etc/sudoers.d/$DEPLOY_USER"
 install -d -m 700 -o "$DEPLOY_USER" -g "$DEPLOY_USER" "/home/$DEPLOY_USER/.ssh"
 echo "$PUBKEY" > "/home/$DEPLOY_USER/.ssh/authorized_keys"
 chmod 600 "/home/$DEPLOY_USER/.ssh/authorized_keys"
