@@ -70,7 +70,7 @@ digest.
 1. `host/bootstrap.sh <ssh-pubkey>` on the fresh VPS (hardening, Docker, swap, edge network).
 2. Put this repo at `/opt/citypulse/platform-infrastructure`; `docker login ghcr.io` (read PAT).
 3. Copy each `.env.example` → `.env`, fill `environments/<env>/secrets/`, and `edge/.env`.
-4. `docker compose --env-file edge/.env -p citypulse-edge up -d`
+4. `docker compose --env-file edge/.env -f edge/docker-compose.yml -p citypulse-edge up -d`
 5. `docker compose --env-file environments/prod/.env -p citypulse-prod up -d`
 6. Staging on demand: `scripts/staging.sh up` / `down`.
 

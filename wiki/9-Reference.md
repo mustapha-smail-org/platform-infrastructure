@@ -6,7 +6,7 @@ Always pin the env file and project name:
 
 ```bash
 docker compose --env-file environments/<env>/.env -p citypulse-<env> <cmd>
-docker compose --env-file edge/.env               -p citypulse-edge  <cmd>
+docker compose --env-file edge/.env -f edge/docker-compose.yml -p citypulse-edge  <cmd>
 ```
 
 `scripts/*.sh` wrap this for you.

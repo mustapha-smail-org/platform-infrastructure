@@ -97,6 +97,6 @@ Next:
   3. docker login ghcr.io   (read-only PAT, so the box can pull private images)
   4. Fill environments/<env>/.env and environments/<env>/secrets/, and edge/.env
   5. Bring up edge, then prod:
-       docker compose --env-file edge/.env -p citypulse-edge up -d
+       docker compose --env-file edge/.env -f edge/docker-compose.yml -p citypulse-edge up -d
        docker compose --env-file environments/prod/.env -p citypulse-prod up -d
 EOF

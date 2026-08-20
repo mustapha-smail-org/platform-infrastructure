@@ -44,7 +44,7 @@ docker compose --env-file environments/<env>/.env -p citypulse-<env> logs --tail
 - The hostname must resolve to the VPS IP (A record or `nip.io`), and inbound
   **80** must be open (`ufw status`) — Let's Encrypt validates over HTTP.
 - Check Caddy logs:
-  `docker compose --env-file edge/.env -p citypulse-edge logs caddy`.
+  `docker compose --env-file edge/.env -f edge/docker-compose.yml -p citypulse-edge logs caddy`.
 - Hitting Let's Encrypt rate limits? Use the staging ACME CA (commented in
   `edge/Caddyfile`) while iterating.
 
@@ -52,6 +52,23 @@ docker compose --env-file environments/<env>/.env -p citypulse-<env> logs --tail
 
 - `docker login ghcr.io` may have expired — re-run with a valid read PAT.
 - The `*_DIGEST` in `.env` must be a real, pushed `sha256:...` for that repo.
+
+## A secret path is a directory / `cp: cannot overwrite directory`
+
+You ran `up` **before** the secret files existed. Docker creates a bind-mount
+source as an empty **directory** (owned by `root`) when it's missing. Stop the
+stack, remove the bogus directories, then place the real files:
+
+```bash
+docker compose --env-file environments/<env>/.env -p citypulse-<env> down
+ls -la environments/<env>/secrets/          # spot the directories
+sudo rm -rf environments/<env>/secrets/<name>   # each wrong entry
+# create the real files, then:
+sudo chown deployer:deployer environments/<env>/secrets/*
+chmod 600 environments/<env>/secrets/*
+```
+
+Always have the secret files in place **before** the first `up` for an env.
 
 ## frontend exits: "app-config.json not found"
 

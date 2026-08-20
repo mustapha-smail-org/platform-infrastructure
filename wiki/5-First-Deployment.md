@@ -12,7 +12,7 @@ All commands run from `/opt/citypulse/platform-infrastructure` as `deployer`.
 ```bash
 cp edge/.env.example edge/.env
 $EDITOR edge/.env      # ACME_EMAIL + the two app hostnames (see DNS & TLS)
-docker compose --env-file edge/.env -p citypulse-edge up -d
+docker compose --env-file edge/.env -f edge/docker-compose.yml -p citypulse-edge up -d
 ```
 
 Until you own the domain, set the hosts to a temporary value — see
