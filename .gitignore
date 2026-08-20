@@ -1,0 +1,13 @@
+# Real env files and secrets live only on the VPS — never in git.
+# The committed truth is the *.example files.
+environments/*/.env
+edge/.env
+
+# Resolved secret material dropped by CI / by hand on the box.
+environments/*/secrets/*
+!environments/*/secrets/README.md
+!environments/*/secrets/.gitkeep
+
+# compose flock/backup artifacts
+*.lock
+*.bak

@@ -1,0 +1,124 @@
+# CityPulse — single-host topology (one file, both environments).
+#
+# This one file describes the whole stack. Everything that differs between
+# staging and production is supplied by the per-environment env file under
+# environments/<env>/.env, selected at run time:
+#
+#   docker compose --env-file environments/prod/.env    -p citypulse-prod    up -d
+#   docker compose --env-file environments/staging/.env -p citypulse-staging up -d
+#
+# The `-p` project name gives each environment its OWN Docker network and
+# container namespace, so staging and prod cannot see or collide with each
+# other. Only the `frontend` is attached to the shared external `citypulse-edge`
+# network, where the Caddy reverse proxy reaches it. The gateway and catalog
+# service stay internal-only (the frontend nginx proxies /api to the gateway
+# same-origin, so the gateway never needs a public address).
+#
+# Images are pinned by immutable digest via variables in the env file. A
+# single-service rollout is just: rewrite that one *_DIGEST line, then
+# `up -d --no-deps <service>` (see scripts/deploy-service.sh).
+
+services:
+  api-gateway:
+    image: "${API_GATEWAY_IMAGE}@${API_GATEWAY_DIGEST}"
+    restart: unless-stopped
+    stop_grace_period: 30s
+    environment:
+      SPRING_PROFILES_ACTIVE: "${SPRING_PROFILES_ACTIVE}"
+      # No -Xmx in the image; the JVM honours JAVA_TOOL_OPTIONS automatically,
+      # so we cap the heap here without touching the Dockerfile. MaxRAMPercentage
+      # is taken against mem_limit below (container-aware).
+      JAVA_TOOL_OPTIONS: "${GATEWAY_JAVA_OPTS}"
+      # Static wiring replaces Eureka: talk to catalog by its compose DNS name.
+      CATALOG_URI: "http://catalog-service:8080"
+      RATE_LIMIT_BACKEND: "memory"
+      ALLOWED_ORIGINS: "${ALLOWED_ORIGINS}"
+    mem_limit: "${GATEWAY_MEM_LIMIT}"
+    cpus: ${GATEWAY_CPUS}
+    networks:
+      internal: {}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health/readiness >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 70s
+
+  catalog-service:
+    image: "${CATALOG_SERVICE_IMAGE}@${CATALOG_SERVICE_DIGEST}"
+    restart: unless-stopped
+    stop_grace_period: 30s
+    environment:
+      SPRING_PROFILES_ACTIVE: "${SPRING_PROFILES_ACTIVE}"
+      JAVA_TOOL_OPTIONS: "${CATALOG_JAVA_OPTS}"
+    mem_limit: "${CATALOG_MEM_LIMIT}"
+    cpus: ${CATALOG_CPUS}
+    volumes:
+      # Resolved config (%%SECRET%% placeholders already substituted by CI) and
+      # the Kafka CA. Mounted at the exact paths the image's SPRING_CONFIG_IMPORT
+      # and application config already expect — no app change.
+      - "${SECRETS_DIR}/application-catalog-service.yaml:/etc/secrets/application.yaml:ro"
+      - "${SECRETS_DIR}/kafka-ca.pem:/etc/secrets/ca.pem:ro"
+    networks:
+      internal: {}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health/readiness >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 70s
+
+  # Batch worker: NOT started by `up` (guarded behind the `batch` profile).
+  # The image is a run-once batch (web-application-type=none, exits with a status
+  # code). A host cron/systemd-timer runs it on demand; it ingests, then exits,
+  # so it costs 0 RAM the rest of the day. See host/data-ingestion.cron.example
+  # and scripts/ingest.sh.
+  data-ingestion:
+    image: "${DATA_INGESTION_IMAGE}@${DATA_INGESTION_DIGEST}"
+    profiles: ["batch"]
+    restart: "no"
+    environment:
+      SPRING_PROFILES_ACTIVE: "${SPRING_PROFILES_ACTIVE}"
+      JAVA_TOOL_OPTIONS: "${INGESTION_JAVA_OPTS}"
+    mem_limit: "${INGESTION_MEM_LIMIT}"
+    cpus: ${INGESTION_CPUS}
+    volumes:
+      - "${SECRETS_DIR}/application-data-ingestion.yaml:/etc/secrets/application.yaml:ro"
+      - "${SECRETS_DIR}/kafka-ca.pem:/etc/secrets/ca.pem:ro"
+    networks:
+      internal: {}
+
+  frontend:
+    image: "${FRONTEND_IMAGE}@${FRONTEND_DIGEST}"
+    restart: unless-stopped
+    environment:
+      PORT: "8080"
+    mem_limit: "${FRONTEND_MEM_LIMIT}"
+    cpus: ${FRONTEND_CPUS}
+    volumes:
+      # app-config.json carries API_GATEWAY_URL (server-side, points at the
+      # internal gateway) plus browser-facing runtime config. The entrypoint
+      # hard-fails if this file is missing — the deploy must place it first.
+      - "${SECRETS_DIR}/app-config.json:/etc/secrets/app-config.json:ro"
+    networks:
+      internal: {}
+      edge:
+        aliases:
+          - "${FRONTEND_EDGE_ALIAS}"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/healthz >/dev/null 2>&1 || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+networks:
+  # Per-project private network (named citypulse-<env>_internal). Service-to-
+  # service traffic (frontend->gateway->catalog) lives here only.
+  internal:
+    driver: bridge
+  # Shared, created once out-of-band: `docker network create citypulse-edge`.
+  # Caddy lives here and reaches each env's frontend by its per-env alias.
+  edge:
+    external: true
+    name: citypulse-edge

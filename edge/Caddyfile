@@ -1,0 +1,40 @@
+# CityPulse edge routing.
+#
+# Each public hostname maps to one environment's frontend container (reached by
+# its network alias on citypulse-edge). The frontend nginx does the same-origin
+# /api proxy to its own gateway internally, so the gateway is never exposed here.
+#
+# ── Before the domain is purchased ────────────────────────────────────────
+# Caddy needs a name to get a public cert. Until you own the domain, either:
+#   (a) point PROD_APP_HOST/STAGING_APP_HOST at a free wildcard-DNS host such as
+#       <ip>.nip.io  (e.g. 51.83.12.34.nip.io / staging.51-83-12-34.nip.io), or
+#   (b) test locally by replacing the site addresses below with `:80` and adding
+#       `tls internal` inside each block (self-signed, no ACME).
+# When the real domain lands, set the two vars in edge/.env and reload Caddy.
+
+{
+	email {$ACME_EMAIL}
+	# Uncomment for dry runs so you don't hit Let's Encrypt rate limits:
+	# acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
+}
+
+# Shared hardening + compression applied to every site below.
+(common) {
+	encode zstd gzip
+	header {
+		-Server
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+}
+
+{$PROD_APP_HOST} {
+	import common
+	reverse_proxy frontend-prod:8080
+}
+
+{$STAGING_APP_HOST} {
+	import common
+	reverse_proxy frontend-staging:8080
+}

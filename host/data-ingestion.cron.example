@@ -1,0 +1,12 @@
+# CityPulse data-ingestion — host cron (replaces the in-app @Scheduled trigger).
+#
+# Install for the deployer user:  crontab -e   (or drop in /etc/cron.d/ with a
+# user column). The in-app cron was "0 0 4 * * *" (Spring's 6-field, seconds
+# first) = 04:00 daily; the host cron equivalent (5-field) is below.
+#
+# Logs go to a file the off-box log shipper tails. `flock` prevents overlap if a
+# run ever exceeds a day.
+
+0 4 * * *  cd /opt/citypulse/platform-infrastructure && /usr/bin/flock -n /tmp/citypulse-ingest-prod.lock scripts/ingest.sh prod >> /var/log/citypulse/ingest-prod.log 2>&1
+
+# Staging ingestion is run by hand when a test needs data — no scheduled entry.

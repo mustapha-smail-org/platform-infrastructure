@@ -1,0 +1,39 @@
+# CityPulse — edge reverse proxy (shared across environments, always on).
+#
+# Caddy is the ONLY thing bound to the host's public 80/443. It terminates TLS
+# (automatic Let's Encrypt once the domain exists) and routes by hostname to the
+# per-env frontend containers over the shared `citypulse-edge` network.
+#
+#   docker network create citypulse-edge   # once, before first up (bootstrap.sh does this)
+#   docker compose --env-file edge/.env -p citypulse-edge up -d
+#
+# ~20 MB RAM. If an environment (e.g. staging) is down, its hostname simply
+# returns 502 — no effect on the others.
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"   # HTTP/3
+    environment:
+      ACME_EMAIL: "${ACME_EMAIL}"
+      PROD_APP_HOST: "${PROD_APP_HOST}"
+      STAGING_APP_HOST: "${STAGING_APP_HOST}"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data       # persisted certs — the one bit of real state on the box
+      - caddy_config:/config
+    networks:
+      edge: {}
+
+volumes:
+  caddy_data:
+  caddy_config:
+
+networks:
+  edge:
+    external: true
+    name: citypulse-edge
