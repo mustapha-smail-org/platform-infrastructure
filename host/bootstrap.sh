@@ -13,10 +13,14 @@ PUBKEY="${1:?pass your SSH public key as the first argument}"
 
 [[ $EUID -eq 0 ]] || { echo "run as root" >&2; exit 1; }
 
+# A fresh cloud image often races the unattended-upgrades / apt-daily timer for
+# the dpkg lock; make apt wait for it rather than failing.
+APT_WAIT="-o DPkg::Lock::Timeout=600"
+
 echo "== 1/9 base packages =="
 export DEBIAN_FRONTEND=noninteractive
-apt-get update -y
-apt-get install -y ca-certificates curl gnupg ufw fail2ban unattended-upgrades
+apt-get $APT_WAIT update -y
+apt-get $APT_WAIT install -y ca-certificates curl gnupg ufw fail2ban unattended-upgrades
 
 echo "== 2/9 non-root sudo user with your key =="
 id "$DEPLOY_USER" &>/dev/null || adduser --disabled-password --gecos "" "$DEPLOY_USER"
@@ -55,7 +59,7 @@ if ! swapon --show | grep -q '/swapfile'; then
   grep -q '/swapfile' /etc/fstab || echo '/swapfile none swap sw 0 0' >> /etc/fstab
 fi
 sysctl -w vm.swappiness=10
-grep -q '^vm.swappiness' /etc/sysctl.conf || echo 'vm.swappiness=10' >> /etc/sysctl.conf
+echo 'vm.swappiness=10' > /etc/sysctl.d/99-citypulse.conf
 
 echo "== 7/9 Docker Engine + compose plugin =="
 if ! command -v docker &>/dev/null; then
@@ -64,8 +68,8 @@ if ! command -v docker &>/dev/null; then
   chmod a+r /etc/apt/keyrings/docker.gpg
   echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" \
     > /etc/apt/sources.list.d/docker.list
-  apt-get update -y
-  apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+  apt-get $APT_WAIT update -y
+  apt-get $APT_WAIT install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 fi
 usermod -aG docker "$DEPLOY_USER"
 # Cap container log growth so /var doesn't fill (logs are also shipped off-box).
