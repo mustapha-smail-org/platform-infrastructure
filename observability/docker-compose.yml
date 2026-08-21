@@ -1,0 +1,31 @@
+# CityPulse observability — a single Grafana Alloy agent, shared across envs.
+#
+#   docker compose --env-file observability/.env -f observability/docker-compose.yml \
+#     -p citypulse-observability up -d
+#
+# Collects logs + metrics for ALL containers on the box (prod and staging) and
+# ships them to Grafana Cloud. Always on, like edge. ~150-250 MB; outbound only.
+
+services:
+  alloy:
+    image: grafana/alloy:latest   # pin to a specific vX.Y.Z once you're settled
+    restart: unless-stopped
+    command:
+      - run
+      - /etc/alloy/config.alloy
+      - --storage.path=/var/lib/alloy/data
+    env_file:
+      - .env
+    mem_limit: 300m
+    volumes:
+      - ./config.alloy:/etc/alloy/config.alloy:ro
+      - alloy_data:/var/lib/alloy/data
+      # Read-only access to Docker (log discovery + cadvisor) and the host (node
+      # metrics). rslave keeps mount propagation working for rootfs.
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/host/root:ro,rslave
+
+volumes:
+  alloy_data:
