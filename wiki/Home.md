@@ -22,6 +22,7 @@ come back to Operations / Troubleshooting / Reference day to day.
 - [Day-to-Day Operations](7-Day-to-Day-Operations.md) — deploy a service, staging on/off, run ingestion, topology changes.
 - [Troubleshooting](8-Troubleshooting.md) — common failures and fixes.
 - [Reference](9-Reference.md) — env-var contract, secret files, ports, command cheat sheet.
+- [Observability](10-Observability.md) — ship logs + metrics to Grafana Cloud.
 
 ## What this runs
 

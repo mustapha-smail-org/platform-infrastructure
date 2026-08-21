@@ -1,0 +1,86 @@
+// CityPulse observability agent (Grafana Alloy).
+// Ships to Grafana Cloud: all Docker container logs -> Loki, host + per-container
+// metrics -> Prometheus. Everything is outbound (HTTPS); no inbound surface.
+// Credentials come from observability/.env via sys.env().
+
+// ── Logs: every Docker container -> Grafana Cloud Loki ────────────────────
+discovery.docker "containers" {
+	host = "unix:///var/run/docker.sock"
+}
+
+// Turn Docker metadata into useful Loki labels (env = compose project).
+discovery.relabel "containers" {
+	targets = discovery.docker.containers.targets
+
+	rule {
+		source_labels = ["__meta_docker_container_name"]
+		regex         = "/(.*)"
+		target_label  = "container"
+	}
+	rule {
+		source_labels = ["__meta_docker_container_label_com_docker_compose_project"]
+		target_label  = "env"
+	}
+	rule {
+		source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+		target_label  = "service"
+	}
+}
+
+loki.source.docker "containers" {
+	host          = "unix:///var/run/docker.sock"
+	targets       = discovery.docker.containers.targets
+	relabel_rules = discovery.relabel.containers.rules
+	forward_to    = [loki.write.grafana_cloud.receiver]
+}
+
+loki.write "grafana_cloud" {
+	endpoint {
+		url = sys.env("GRAFANA_CLOUD_LOKI_URL")
+		basic_auth {
+			username = sys.env("GRAFANA_CLOUD_LOKI_USER")
+			password = sys.env("GRAFANA_CLOUD_TOKEN")
+		}
+	}
+	external_labels = {
+		host = "citypulse-vps",
+	}
+}
+
+// ── Metrics: host (node) + per-container (cadvisor) -> Grafana Cloud ───────
+prometheus.exporter.unix "host" {
+	// Read the real host, not the container, via the mounts in docker-compose.yml.
+	procfs_path = "/host/proc"
+	sysfs_path  = "/host/sys"
+	rootfs_path = "/host/root"
+}
+
+// Per-container CPU/memory — the key view for tuning heap caps on 4 GB.
+prometheus.exporter.cadvisor "containers" {
+	docker_host = "unix:///var/run/docker.sock"
+}
+
+prometheus.scrape "host" {
+	targets         = prometheus.exporter.unix.host.targets
+	scrape_interval = "30s"
+	forward_to      = [prometheus.remote_write.grafana_cloud.receiver]
+}
+
+prometheus.scrape "containers" {
+	targets         = prometheus.exporter.cadvisor.containers.targets
+	scrape_interval = "30s"
+	forward_to      = [prometheus.remote_write.grafana_cloud.receiver]
+}
+
+prometheus.remote_write "grafana_cloud" {
+	endpoint {
+		url = sys.env("GRAFANA_CLOUD_PROM_URL")
+		basic_auth {
+			username = sys.env("GRAFANA_CLOUD_PROM_USER")
+			password = sys.env("GRAFANA_CLOUD_TOKEN")
+		}
+	}
+	external_labels = {
+		host = "citypulse-vps",
+	}
+}

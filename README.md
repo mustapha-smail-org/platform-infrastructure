@@ -91,10 +91,17 @@ the shared managed backends.
 
 ## Observability (off-box)
 
-No Prometheus/Grafana on the VPS. One tiny **Grafana Alloy** (or Vector)
-container per env ships container logs + host/JVM metrics to **Grafana Cloud**
-(free tier); dashboards, storage, and alerting live there. Docker's json log
-driver is capped (`bootstrap.sh`) so `/var` can't fill.
+No Prometheus/Grafana on the VPS. A single shared **Grafana Alloy** agent
+(`observability/`) ships every container's logs to **Grafana Cloud** Loki and
+host + per-container metrics to Grafana Cloud Prometheus (free tier); dashboards,
+storage, and alerting live there. Outbound-only — no new inbound surface.
+
+```bash
+docker compose --env-file observability/.env -f observability/docker-compose.yml \
+  -p citypulse-observability up -d
+```
+
+Docker's json log driver is also capped (`bootstrap.sh`) so `/var` can't fill.
 
 ## Gateway redeploy vs frontend nginx
 

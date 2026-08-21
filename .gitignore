@@ -2,6 +2,7 @@
 # The committed truth is the *.example files.
 environments/*/.env
 edge/.env
+observability/.env
 
 # Resolved secret material dropped by CI / by hand on the box.
 environments/*/secrets/*
