@@ -27,9 +27,9 @@ box, each fully isolated, with staging switchable off so production can own all
         Aiven Postgres · Confluent Kafka   (managed, off-box; per-env DB/topics/group)
 ```
 
-Only `frontend` is public per env; its nginx proxies `/api` to the internal
-gateway same-origin, so gateway and catalog are never exposed. All JVMs are
-heap-capped and memory-limited.
+Only `frontend` is public per env; its Next.js BFF proxies `/api` to the
+internal gateway same-origin, so gateway and catalog are never exposed. All
+JVMs are heap-capped and memory-limited.
 
 ## Layout
 
@@ -103,11 +103,12 @@ docker compose --env-file observability/.env -f observability/docker-compose.yml
 
 Docker's json log driver is also capped (`bootstrap.sh`) so `/var` can't fill.
 
-## Gateway redeploy vs frontend nginx
+## Gateway redeploy vs frontend
 
-The frontend nginx uses a Docker `resolver` and holds the gateway upstream in a
-variable, so it re-resolves the gateway's IP per request. A gateway rollout
-(new container IP) needs no frontend reload.
+The frontend's Next.js BFF reaches the gateway by its service name
+(`FRONTEND_API_BASE_URL=http://api-gateway:8080`), resolved via Docker's
+embedded DNS on each upstream connection. A gateway rollout (new container IP)
+needs no frontend reload.
 
 ## Phase-0 app changes (done)
 

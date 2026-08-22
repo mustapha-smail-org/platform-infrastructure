@@ -5,5 +5,6 @@ each `*-cd` repo's `config/application-staging.yaml` using the **HPR** secret
 set. Staging must point at the staging-suffixed database and Kafka topics and a
 **distinct consumer group id** so it never consumes production's messages.
 
-`app-config.json` → `API_GATEWAY_URL` = `http://api-gateway:8080` (this env's
-own internal gateway; project isolation keeps it separate from prod's).
+The frontend needs no file here: it is configured by env vars in `../.env`
+(`FRONTEND_API_BASE_URL` = `http://api-gateway:8080`, this env's own internal
+gateway; project isolation keeps it separate from prod's).
