@@ -1,0 +1,43 @@
+# CityPulse — LOCAL dev backing services (your laptop, not the VPS).
+#
+#   docker compose -f local/docker-compose.yml -p citypulse-local up -d
+#
+# This provides Postgres + Kafka/Schema-Registry (Redpanda) so you can run the
+# Spring services and the Vite frontend NATIVELY against them (hot reload), via
+# each service's `local` profile. It is a convenience for development only — it
+# is never deployed anywhere.
+#
+# Point your services' application-local.yaml at:
+#   Postgres          jdbc:postgresql://localhost:5432/citypulse_catalog  (citypulse/citypulse)
+#   Kafka             localhost:19092
+#   Schema Registry   http://localhost:18081
+# Adjust ports here if they collide with something you already run.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: citypulse
+      POSTGRES_PASSWORD: citypulse
+      POSTGRES_DB: citypulse_catalog
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:v24.2.7
+    command:
+      - redpanda
+      - start
+      - --mode=dev-container
+      - --smp=1
+      - --kafka-addr=internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr=internal://redpanda:9092,external://localhost:19092
+      - --schema-registry-addr=internal://0.0.0.0:8081,external://0.0.0.0:18081
+    ports:
+      - "19092:19092"   # Kafka, from the host
+      - "18081:18081"   # Schema Registry, from the host
+
+volumes:
+  pgdata:
