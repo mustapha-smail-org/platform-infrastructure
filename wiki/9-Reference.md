@@ -46,10 +46,9 @@ own network; nothing else is published to the host.
 |------|------------|---------|
 | `application-catalog-service.yaml` | `/etc/secrets/application.yaml` | catalog-service |
 | `application-data-ingestion.yaml` | `/etc/secrets/application.yaml` | data-ingestion |
-| `app-config.json` | `/etc/secrets/app-config.json` | frontend |
 | `kafka-ca.pem` | `/etc/secrets/ca.pem` | catalog, ingestion |
 
-api-gateway: no file — env-driven from `.env`.
+api-gateway and frontend: no file — env-driven from `.env`.
 
 ## Scripts
 

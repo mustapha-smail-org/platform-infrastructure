@@ -7,14 +7,14 @@ cloud backing services.
 ## Two ways to run locally
 
 ### Option A — native services against cloud dev backing (quickest)
-Run each service with its `local` Spring profile / Vite dev server, pointed at a
+Run each service with its `local` Spring profile / Next.js dev server, pointed at a
 dev database + Kafka (e.g. the Aiven/Confluent dev instances your
 `application-local.yaml` already references):
 
 ```bash
 # in each service repo
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=local   # java services
-npm run dev                                                # frontend (Vite)
+npm run dev                                                # frontend (Next.js)
 ```
 No Docker needed. Downside: you depend on cloud backing being reachable.
 
@@ -32,8 +32,9 @@ Then set your services' `application-local.yaml` to:
 - Schema Registry: `http://localhost:18081`
 
 Run order that works well: `catalog-service` (8081) → `api-gateway` (8080) →
-`frontend` (Vite proxies `/api` to the gateway). `data-ingestion` you run
-on demand (it's a batch).
+`frontend` (`next dev`; set `CITYPULSE_API_BASE_URL=http://localhost:8080` so the
+BFF proxies `/api` to the gateway). `data-ingestion` you run on demand (it's a
+batch).
 
 > The starter compose is a template — adjust ports if they clash with something
 > you already run, and mirror those ports in `application-local.yaml`.

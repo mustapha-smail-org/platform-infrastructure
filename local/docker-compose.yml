@@ -3,9 +3,9 @@
 #   docker compose -f local/docker-compose.yml -p citypulse-local up -d
 #
 # This provides Postgres + Kafka/Schema-Registry (Redpanda) so you can run the
-# Spring services and the Vite frontend NATIVELY against them (hot reload), via
-# each service's `local` profile. It is a convenience for development only — it
-# is never deployed anywhere.
+# Spring services and the Next.js frontend NATIVELY against them (hot reload),
+# via each service's `local` profile. It is a convenience for development only —
+# it is never deployed anywhere.
 #
 # Point your services' application-local.yaml at:
 #   Postgres          jdbc:postgresql://localhost:5432/citypulse_catalog  (citypulse/citypulse)

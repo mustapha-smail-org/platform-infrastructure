@@ -11,8 +11,8 @@
 # container namespace, so staging and prod cannot see or collide with each
 # other. Only the `frontend` is attached to the shared external `citypulse-edge`
 # network, where the Caddy reverse proxy reaches it. The gateway and catalog
-# service stay internal-only (the frontend nginx proxies /api to the gateway
-# same-origin, so the gateway never needs a public address).
+# service stay internal-only (the frontend's Next.js BFF proxies /api to the
+# gateway server-side, so the gateway never needs a public address).
 #
 # Images are pinned by immutable digest via variables in the env file. A
 # single-service rollout is just: rewrite that one *_DIGEST line, then
@@ -93,21 +93,22 @@ services:
     restart: unless-stopped
     environment:
       PORT: "8080"
+      # Internal gateway URL. The Next.js BFF route handlers proxy the browser's
+      # same-origin /api/* calls here, server-side — never exposed to the browser.
+      CITYPULSE_API_BASE_URL: "${FRONTEND_API_BASE_URL}"
+      # Public site origin, read server-side for metadata/SEO.
+      NEXT_PUBLIC_SITE_URL: "${FRONTEND_SITE_URL}"
     mem_limit: "${FRONTEND_MEM_LIMIT}"
     cpus: ${FRONTEND_CPUS}
-    volumes:
-      # app-config.json carries API_GATEWAY_URL (server-side, points at the
-      # internal gateway) plus browser-facing runtime config. The entrypoint
-      # hard-fails if this file is missing — the deploy must place it first.
-      - "${SECRETS_DIR}/app-config.json:/etc/secrets/app-config.json:ro"
     networks:
       internal: {}
       edge:
         aliases:
           - "${FRONTEND_EDGE_ALIAS}"
     healthcheck:
-      # 127.0.0.1, not localhost: nginx listens IPv4-only, while localhost
-      # resolves to ::1 first inside the container (busybox wget won't fall back).
+      # 127.0.0.1, not localhost: the Next server binds IPv4 (HOSTNAME=0.0.0.0),
+      # while localhost resolves to ::1 first inside the container (busybox wget
+      # won't fall back).
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/healthz >/dev/null 2>&1 || exit 1"]
       interval: 20s
       timeout: 5s

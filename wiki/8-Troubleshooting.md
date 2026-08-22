@@ -70,11 +70,13 @@ chmod 600 environments/<env>/secrets/*
 
 Always have the secret files in place **before** the first `up` for an env.
 
-## frontend exits: "app-config.json not found"
+## frontend can't reach the gateway
 
-The frontend hard-fails without `/etc/secrets/app-config.json`. Ensure
-`environments/<env>/secrets/app-config.json` exists (with a non-null
-`API_GATEWAY_URL`) and is `chmod 600`.
+The frontend is configured by env vars in `environments/<env>/.env`, not a
+secret file. Ensure `FRONTEND_API_BASE_URL` is set to the internal gateway
+(`http://api-gateway:8080`) and `FRONTEND_SITE_URL` to the public origin; a
+missing `FRONTEND_API_BASE_URL` leaves the BFF proxying to its
+`http://localhost:8080` default, which won't resolve inside the container.
 
 ## data-ingestion batch fails
 

@@ -50,11 +50,11 @@ Files it must contain (see `environments/prod/secrets/README.md`):
 |------|-------------|------------|
 | `application-catalog-service.yaml` | catalog-service | `/etc/secrets/application.yaml` |
 | `application-data-ingestion.yaml` | data-ingestion | `/etc/secrets/application.yaml` |
-| `app-config.json` | frontend | `/etc/secrets/app-config.json` |
 | `kafka-ca.pem` | catalog + ingestion | `/etc/secrets/ca.pem` |
 
-> The **api-gateway needs no file here** — it is driven entirely by env vars in
-> `.env` (`CATALOG_URI`, `ALLOWED_ORIGINS`, `RATE_LIMIT_BACKEND`).
+> The **api-gateway and frontend need no file here** — both are driven entirely
+> by env vars in `.env`. The gateway: `CATALOG_URI`, `ALLOWED_ORIGINS`,
+> `RATE_LIMIT_BACKEND`. The frontend: `FRONTEND_API_BASE_URL`, `FRONTEND_SITE_URL`.
 
 ### Resolving the app config files 🔧
 
@@ -77,16 +77,17 @@ Verify nothing is left unresolved:
 grep -R '%%SECRET:' environments/prod/secrets/ && echo "UNRESOLVED!" || echo "clean"
 ```
 
-### The frontend `app-config.json`
+### The frontend env vars
 
-```json
-{
-  "API_GATEWAY_URL": "http://api-gateway:8080"
-}
+The frontend is configured in `environments/<env>/.env`, not a secret file:
+
+```
+FRONTEND_API_BASE_URL=http://api-gateway:8080     # internal gateway; BFF proxies /api here
+FRONTEND_SITE_URL=https://<public-host>           # server-side metadata/SEO
 ```
 
-`API_GATEWAY_URL` points at the **internal** gateway (the frontend nginx proxies
-`/api` to it). Add any browser-facing runtime keys the SPA expects alongside it.
+`FRONTEND_API_BASE_URL` points at the **internal** gateway (the Next.js BFF
+proxies `/api` to it, server-side); it is never exposed to the browser.
 
 ### The Kafka CA
 

@@ -87,8 +87,8 @@ scripts/staging.sh down       # stop it; hands all RAM back to prod
 
 ```bash
 docker compose --env-file environments/prod/.env -p citypulse-prod exec catalog-service sh
-# one-off command:
-docker compose --env-file environments/prod/.env -p citypulse-prod exec -T frontend cat /etc/secrets/app-config.json
+# one-off command (frontend is env-configured, no secret file):
+docker compose --env-file environments/prod/.env -p citypulse-prod exec -T frontend env | grep -E 'CITYPULSE_API_BASE_URL|NEXT_PUBLIC_SITE_URL'
 ```
 
 ## Test the request chain (bypass layers to isolate a fault)

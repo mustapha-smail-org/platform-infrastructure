@@ -60,7 +60,7 @@ for _ in $(seq 1 40); do   # ~40 * 5s = 200s, covers JVM start_period
 done
 [[ "${status:-}" == "healthy" ]] || rollback
 
-# No frontend reload needed after a gateway rollout: the frontend nginx uses a
-# Docker resolver and re-resolves the gateway's IP per request.
+# No frontend reload needed after a gateway rollout: the frontend's Next.js BFF
+# reaches the gateway by service name, re-resolved via Docker DNS per connection.
 
 echo ">> done."
