@@ -98,6 +98,10 @@ services:
       CITYPULSE_API_BASE_URL: "${FRONTEND_API_BASE_URL}"
       # Public site origin, read server-side for metadata/SEO.
       NEXT_PUBLIC_SITE_URL: "${FRONTEND_SITE_URL}"
+      # GA4 measurement ID, read SERVER-SIDE at runtime and handed to the
+      # analytics client via context — NOT NEXT_PUBLIC, so it isn't build-baked.
+      # Empty disables analytics (and its consent banner).
+      GA_ID: "${FRONTEND_GA_ID}"
     mem_limit: "${FRONTEND_MEM_LIMIT}"
     cpus: ${FRONTEND_CPUS}
     networks:
